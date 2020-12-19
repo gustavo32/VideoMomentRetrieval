@@ -1,0 +1,10 @@
+.ipynb_checkpoints/
+.vector_cache/
+.virtual_documents/
+__pycache__/
+dask-worker-space/
+data/
+datasets
+TCC_env/
+utils/.ipynb_checkpoints/
+utils/vocabulary/
