@@ -9,3 +9,4 @@ datasets
 TCC_env/
 utils/.ipynb_checkpoints/
 utils/vocabulary/
+visual_features_extracted/
