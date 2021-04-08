@@ -43,19 +43,6 @@ def get_embedding_matrix(descriptions, embedding_file, embedding_dim, n_tokens):
     return vectorizer, embedding_matrix
 
 
-def preprocess_sentence_dataset(info, configs=None):
-    configs = utils.load_configs_if_none(configs)
-    
-    vectorizer, embedding_matrix = get_embedding_matrix(
-        info['description'],
-        configs.sentence.embedding_file,
-        configs.sentence.embeddings_dim,
-        configs.sentence.n_tokens
-    )
-    
-    return Dataset.from_tensor_slices(vectorizer(info['description'])), embedding_matrix
-
-
 class SentenceLayer(Layer):
     def __init__(self, embedding_matrix, configs=None):
         super(SentenceLayer, self).__init__()

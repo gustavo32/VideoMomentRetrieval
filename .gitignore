@@ -1,6 +1,7 @@
 .ipynb_checkpoints/
 .vector_cache/
 .virtual_documents/
+.idea/
 __pycache__/
 dask-worker-space/
 data/

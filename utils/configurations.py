@@ -33,7 +33,9 @@ class DatasetConfigs():
 #     audio = AudioConfigs()
     fps = 30
     clip_length = 150
-    info_path = 'data/train_data.json'
+    train_info_path = 'data/train_data.json'
+    valid_info_path = 'data/val_data.json'
+    test_info_path = 'data/test_data.json'
     batch_size = 16
     include_audio_features = False
     n_features = 128
