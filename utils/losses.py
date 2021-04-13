@@ -2,22 +2,23 @@ import numpy as np
 import tensorflow as tf
 
 
-def get_ranking_loss(scores, margin, top_k=2):
+def get_ranking_loss(scores, margin, top_k=8):
     shape_negative = list(scores.shape)
+    bool_matrix = tf.ones(shape_negative)
+    bool_matrix = tf.linalg.set_diag(bool_matrix, tf.zeros(shape_negative[0])) == 1
     shape_negative[-1] = shape_negative[-1] - 1
-    
-    scores_true = tf.linalg.diag_part(scores)
-    scores_negatives = tf.sort(tf.reshape(scores[scores != tf.transpose(scores)], shape_negative), axis=1)[:, ::-1][:, :top_k]
-               
-    loss = margin - tf.tile(tf.reshape(scores_true, (-1, 1)), [1, scores_negatives.shape[1]]) + scores_negatives
+
+    scores_positives = tf.linalg.diag_part(scores)
+    scores_negatives = tf.reshape(scores[bool_matrix], shape_negative)
+    top_k_scores_negatives = tf.sort(scores_negatives, axis=1, direction="DESCENDING")[:, :top_k]
+
+    loss = margin - scores_positives + tf.reduce_sum(top_k_scores_negatives, axis=1)
     loss = tf.where(loss < 0.0, 0.0, loss)
-    loss = tf.reduce_sum(loss, axis=1)
 
     return loss
 
 
-def margin_based_ranking_loss(scores_videos, scores_sentences, margin=1, top_k=2):
-    
+def margin_based_ranking_loss(scores_videos, scores_sentences, margin=1, top_k=8):
     video_loss = get_ranking_loss(scores_videos, margin, top_k)
     sentence_loss = get_ranking_loss(scores_sentences, margin, top_k)
     

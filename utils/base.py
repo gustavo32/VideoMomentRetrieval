@@ -78,89 +78,87 @@ class MomentVideo(Model):
         tiled_tensor2 = tf.tile(tensor2, tf.constant([tensor1.shape[0], 1], dtype=tf.int32))
         similarity = self.cosine_similarity(repeated_tensor1, tiled_tensor2)
         return tf.reshape(similarity, [tensor1.shape[0], tensor2.shape[0]])
-    
-    @tf.function
-    def get_scores(self, video_repr_tensor, sentence_repr_tensor):
-        coattention_matrix = self.matrix_cosine_similarity(video_repr_tensor, sentence_repr_tensor)
-        
-        normalized_sentence = tf.nn.softmax(coattention_matrix, axis=1)
-        normalized_video = tf.nn.softmax(coattention_matrix, axis=0)
-            
-        sentence_attention = tf.linalg.matmul(normalized_sentence, sentence_repr_tensor)
-        video_attention = tf.linalg.matmul(normalized_video, video_repr_tensor, transpose_a=True)
-        
-        scores_video = self.cosine_similarity(video_repr_tensor, sentence_attention)
-        scores_sentence = self.cosine_similarity(sentence_repr_tensor, video_attention)
-        
-        return scores_video, scores_sentence
-    
-    
-    def call(self, data, training=False):
 
+
+    @tf.function
+    def get_sentence_score(self, video_repr_tensor, sentence_repr_tensor, coattention_matrix):
+        normalized_video = tf.nn.softmax(coattention_matrix, axis=0)
+        video_attention = tf.linalg.matmul(normalized_video, video_repr_tensor, transpose_a=True)
+        return self.cosine_similarity(sentence_repr_tensor, video_attention)
+
+
+    @tf.function
+    def get_video_score(self, video_repr_tensor, sentence_repr_tensor, coattention_matrix):
+        normalized_sentence = tf.nn.softmax(coattention_matrix, axis=1)
+        sentence_attention = tf.linalg.matmul(normalized_sentence, sentence_repr_tensor)
+        return self.cosine_similarity(video_repr_tensor, sentence_attention)
+
+
+    @tf.function
+    def call(self, data):
         videos, sentences = data
         
         videos_repr = self.video_1(videos)
         sentences_repr = self.sentence_1(sentences)
-    
-        if training == False:
-            scores_videos = []
-            scores_sentences = []
-            for i in range(self.batch_size):
-                scores_video, scores_sentence = self.get_scores(videos_repr[i], sentences_repr[i])
-                scores_videos.append(scores_video)
-                scores_sentences.append(scores_sentence)
-            
-            scores_videos = tf.stack(scores_videos)
-            scores_sentences = tf.stack(scores_sentences)
-            
-            return scores_videos, scores_sentences
-        
-        else:
-            sum_scores_videos = []
-            sum_scores_sentences = []
-            for i in range(self.batch_size):
-                _sum_scores_videos = []
-                _sum_scores_sentences = []
-                for j in range(self.batch_size):
-                    scores_video, scores_sentence = self.get_scores(videos_repr[i], sentences_repr[j])
-                    _sum_scores_videos.append(tf.reduce_sum(scores_video)/len(scores_video))
-                    _sum_scores_sentences.append(tf.reduce_sum(scores_sentence)/len(scores_sentence))
-                
-                sum_scores_videos.append(_sum_scores_videos)
-                sum_scores_sentences.append(_sum_scores_sentences)
-            
-            sum_scores_videos = tf.stack(sum_scores_videos)
-            sum_scores_sentences = tf.transpose(tf.stack(sum_scores_sentences))
-            
-            return sum_scores_videos, sum_scores_sentences
+
+        scores_videos = []
+        scores_sentences = []
+        for i in range(self.batch_size):
+            _scores_videos = []
+            _scores_sentences = []
+            for j in range(self.batch_size):
+                coattention_matrix = self.matrix_cosine_similarity(videos_repr[i], sentences_repr[j])
+                scores_video = self.get_video_score(videos_repr[i], sentences_repr[j], coattention_matrix)
+                scores_sentence = self.get_sentence_score(videos_repr[i], sentences_repr[j], coattention_matrix)
+
+                _scores_videos.append(tf.reduce_logsumexp(scores_video))
+                _scores_sentences.append(tf.reduce_logsumexp(scores_sentence))
+
+            scores_videos.append(_scores_videos)
+            scores_sentences.append(_scores_sentences)
+
+        scores_videos = tf.stack(scores_videos)
+        scores_sentences = tf.transpose(tf.stack(scores_sentences))
+
+        return scores_videos, scores_sentences
     
     
     def train_step(self, data):
-            videos, sentences, y_true = data
+        videos, sentences, y_true = data
 #             videos, sentences, y_true = [(v, s, l) for (v, s, l) in data.take(1)]
-            with tf.GradientTape() as tape:
-                scores_videos, scores_sentences = self((videos, sentences), training=True)  # Forward pass
-                # Compute the loss margin-based ranking loss
-                loss = margin_based_ranking_loss(scores_videos, scores_sentences, margin=1, top_k=8)
-                
-            # Compute gradients
-            trainable_vars = self.trainable_variables
-            gradients = tape.gradient(loss, trainable_vars)
+        with tf.GradientTape() as tape:
+            scores_videos, scores_sentences = self((videos, sentences))  # Forward pass
+            # Compute the loss margin-based ranking loss
+            loss = margin_based_ranking_loss(scores_videos, scores_sentences, margin=1, top_k=8)
 
-            # Update weights
-            self.optimizer.apply_gradients(zip(gradients, trainable_vars))
+        # Compute gradients
+        trainable_vars = self.trainable_variables
+        gradients = tape.gradient(loss, trainable_vars)
+
+        # Update weights
+        self.optimizer.apply_gradients(zip(gradients, trainable_vars))
 
 #             # Compute our own metrics
 #             loss_tracker.update_state(loss)
 #             mae_metric.update_state(y, y_pred)
-            return {"loss": loss}
+        return {"loss": loss}
 
     def test_step(self, data):
         videos, sentences, y_true = data
-        scores_videos, scores_sentences = self((videos, sentences), training=False)
+
+        videos_repr = self.video_1(videos)
+        sentences_repr = self.sentence_1(sentences)
+
+        scores_videos = []
+        for i in range(self.batch_size):
+            coattention_matrix = self.matrix_cosine_similarity(videos_repr[i], sentences_repr[i])
+            scores_video = self.get_video_score(videos_repr[i], sentences_repr[i], coattention_matrix)
+            scores_videos.append(scores_video)
+
+        scores_videos = tf.stack(scores_videos)
         miou_score = tf.numpy_function(mIOU, [scores_videos, y_true], tf.float64)
-        
-        scores_videos, scores_sentences = self((videos, sentences), training=True)
+
+        scores_videos, scores_sentences = self.call((videos, sentences))
         loss = margin_based_ranking_loss(scores_videos, scores_sentences, margin=1, top_k=8)
         
         return {'mIOU': miou_score, 'loss': loss}
