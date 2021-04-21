@@ -2,6 +2,7 @@ from tensorflow.keras.layers.experimental.preprocessing import TextVectorization
 from tensorflow.data import Dataset
 from tensorflow.keras.layers import Layer, Bidirectional, Embedding, GRU
 from tensorflow.keras import initializers
+import tensorflow as tf
 
 import pandas as pd
 import numpy as np
@@ -52,10 +53,11 @@ class SentenceLayer(Layer):
             configs.sentence.embeddings_dim,
             input_length=25,
             embeddings_initializer=initializers.Constant(embedding_matrix),
-            trainable=False
+            trainable=True
         )
         
-        self.bigru_1 = Bidirectional(GRU(configs.n_features // 2, return_sequences=True))
+        self.bigru_1 = Bidirectional(GRU(configs.n_features // 2, return_sequences=True,
+                                         activity_regularizer=tf.keras.regularizers.L2(1e-5)))
         
     def call(self, inputs):
         x = self.embedding_1(inputs)

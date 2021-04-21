@@ -2,7 +2,7 @@ from utils import configurations, utils
 from moviepy.editor import VideoFileClip, ColorClip, concatenate_videoclips
 import tensorflow_hub as hub
 import tensorflow as tf
-from tensorflow.keras.layers import Layer, Bidirectional, GRU
+from tensorflow.keras.layers import Layer, Bidirectional, GRU, Dense
 import numpy as np
 import os
 from tqdm import tqdm
@@ -48,8 +48,9 @@ class VideoLayer(Layer):
     def __init__(self, configs=None):
         super(VideoLayer, self).__init__()
         configs = utils.load_configs_if_none(configs)
-        self.bigru_1 = Bidirectional(
-            GRU(configs.n_features // 2, return_sequences=True))
+        self.dense_1 = Dense(configs.n_features, activity_regularizer=tf.keras.regularizers.L2(1e-5))
+#         self.bigru_1 = Bidirectional(
+#             GRU(configs.n_features // 2, return_sequences=True))
 
     def call(self, inputs):
-        return self.bigru_1(inputs)
+        return self.dense_1(inputs)

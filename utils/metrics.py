@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def moving_average(x, window):
     return np.convolve(x, np.ones(window), 'valid') / window
 
@@ -23,7 +22,7 @@ def each_pred_moving_average(scores, period):
     return segment[0], segment[-1]
 
 
-def prediction_by_moving_average(scores_videos, period=3):
+def prediction_by_moving_average(scores_videos, period):
     return np.apply_along_axis(each_pred_moving_average, 1, scores_videos, period=period)
 
 
@@ -37,8 +36,9 @@ def intersection_over_union(labels):
     return len(intersection)/len(union)
 
 
-def mIOU(scores_videos, y_true):
-    y_pred = prediction_by_moving_average(scores_videos)
+def mIOU(scores_videos, y_true, period=3):
+    y_pred = prediction_by_moving_average(scores_videos, period) // 25
     scores = np.apply_along_axis(
         intersection_over_union, 1, np.concatenate([y_true, y_pred], axis=-1))
     return scores.mean()
+

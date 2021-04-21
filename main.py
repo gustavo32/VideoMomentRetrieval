@@ -18,8 +18,8 @@ if __name__ == "__main__":
 
     tf.config.set_soft_device_placement(True)
     moment.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=5e-4))
-    print(moment.evaluate(test_ds))
+    moment.evaluate(test_ds)
     with tf.device("GPU:0"):
-        moment.fit(train_ds.shuffle(100), epochs=3, validation_data=valid_ds)
+        moment.fit(train_ds.shuffle(100).cache(), epochs=3, validation_data=valid_ds)
 
     print(moment.evaluate(test_ds))
