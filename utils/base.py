@@ -73,8 +73,7 @@ class MomentVideo(Model):
         self.video_1 = video_layer
         self.sentence_1 = sentence_layer
         self.batch_size = batch_size
-        self.video_attention_layer = tf.keras.layers.Attention()
-        self.sentence_attention_layer = tf.keras.layers.Attention()
+        self.attn_layer = tf.keras.layers.Attention()
         self.proposals = proposals
     
     def cosine_similarity(self, tensor1, tensor2, axis=2):
@@ -114,11 +113,12 @@ class MomentVideo(Model):
         batch_positive_score = []
         batch_negative_score = []
         for i in range(self.batch_size):
-            similarities = self.cosine_similarity(videos_repr[i], sentences_repr[i], axis=-1)
             positive_score = 0.0
             negative_scores = []
             for proposal in self.proposals:
-                score = tf.reduce_sum(similarities[proposal[0]*25:(proposal[1]+1)*25])
+                attn_video = self.attn_layer([sentences_repr[i][None], videos_repr[i, proposal[0]*25:(proposal[1]+1)*25]])
+                attn_video = attn_video[0]
+                score = self.cosine_similarity(attn_video, sentences_repr[i], axis=0)
                 if tf.reduce_all(proposal == y_true[i]):
                     positive_score = score
                 else:
