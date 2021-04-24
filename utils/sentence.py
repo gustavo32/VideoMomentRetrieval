@@ -60,4 +60,5 @@ class SentenceLayer(Layer):
         
     def call(self, inputs):
         x = self.embedding_1(inputs)
-        return self.bigru_1(x)
+        bigru = self.bigru_1(x)
+        return tf.math.l2_normalize(bigru, axis=-1)

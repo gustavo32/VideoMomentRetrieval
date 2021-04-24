@@ -11,3 +11,4 @@ utils/.ipynb_checkpoints/
 utils/vocabulary/
 visual_features_extracted/
 rgb_vgg_fc7_features/
+venv/

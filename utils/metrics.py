@@ -36,8 +36,8 @@ def intersection_over_union(labels):
     return len(intersection)/len(union)
 
 
-def mIOU(scores_videos, y_true, period=3):
-    y_pred = prediction_by_moving_average(scores_videos, period) // 25
+def mIOU(y_pred, y_true, period=3):
+#     y_pred = prediction_by_moving_average(scores_videos, period) // 25
     scores = np.apply_along_axis(
         intersection_over_union, 1, np.concatenate([y_true, y_pred], axis=-1))
     return scores.mean()

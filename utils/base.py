@@ -76,7 +76,6 @@ class MomentVideo(Model):
         self.video_attention_layer = tf.keras.layers.Attention()
         self.sentence_attention_layer = tf.keras.layers.Attention()
         self.proposals = proposals
-        
     
     def cosine_similarity(self, tensor1, tensor2, axis=2):
         num = tf.reduce_sum(tensor1 * tensor2, axis=axis)
