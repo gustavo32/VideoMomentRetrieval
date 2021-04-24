@@ -56,9 +56,9 @@ class SentenceLayer(Layer):
             trainable=True
         )
         
-        self.bigru_1 = Bidirectional(GRU(configs.n_features // 2, return_sequences=True,
-                                         activity_regularizer=tf.keras.regularizers.L2(1e-5)))
+        self.bigru_1 = Bidirectional(GRU(configs.n_features // 2))
         
     def call(self, inputs):
         x = self.embedding_1(inputs)
-        return self.bigru_1(x)
+        bigru = self.bigru_1(x)
+        return tf.math.l2_normalize(bigru, axis=-1)

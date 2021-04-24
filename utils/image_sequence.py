@@ -48,9 +48,11 @@ class VideoLayer(Layer):
     def __init__(self, configs=None):
         super(VideoLayer, self).__init__()
         configs = utils.load_configs_if_none(configs)
-        self.dense_1 = Dense(configs.n_features, activity_regularizer=tf.keras.regularizers.L2(1e-5))
+        self.dense_1 = tf.keras.layers.Dense(configs.n_features)
 #         self.bigru_1 = Bidirectional(
 #             GRU(configs.n_features // 2, return_sequences=True))
 
     def call(self, inputs):
-        return self.dense_1(inputs)
+        dense = self.dense_1(inputs)
+        return dense
+        
